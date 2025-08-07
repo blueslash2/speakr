@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Speakr - Audio Transcription & Summarization</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="http://ai.byfunds.com/hystatic/tailwindcss.js"></script>
+    <script src="http://ai.byfunds.com/hystatic/vue@3/dist/vue.global.js"></script>
+    <script src="http://ai.byfunds.com/hystatic/npm/marked/marked.min.js"></script>
     <!-- EasyMDE Markdown Editor -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="http://ai.byfunds.com/hystatic/npm/easymde/dist/easymde.min.css">
+    <script src="http://ai.byfunds.com/hystatic/npm/easymde/dist/easymde.min.js"></script>
+    <link rel="stylesheet" href="http://ai.byfunds.com/hystatic/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/icon-32x32.png') }}">
@@ -40,7 +39,7 @@
 </head>
 <body class="h-full bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300">
     <div id="loader" class="fixed inset-0 bg-gray-800 flex items-center justify-center z-50">
-        <div class="text-white text-lg">Loading...</div>
+        <div class="text-white text-lg">正在打开...</div>
     </div>
     <div id="app" v-cloak
          data-use-asr-endpoint="{{ use_asr_endpoint }}" 
@@ -60,7 +59,7 @@
                 <!-- Logo and Title -->
                 <div class="flex items-center gap-3">
                     <img src="{{ url_for('static', filename='img/icon-32x32.png') }}" alt="Speakr" class="w-8 h-8">
-                    <h1 class="text-xl font-bold text-[var(--text-primary)]">Speakr</h1>
+                    <h1 class="text-xl font-bold text-[var(--text-primary)]">万象·会议录音助手</h1>
                 </div>
             </div>
 
@@ -70,7 +69,7 @@
                 <button @click="switchToUploadView" 
                         class="px-3 py-1.5 bg-[var(--bg-button)] text-[var(--text-button)] rounded-lg hover:bg-[var(--bg-button-hover)] transition-colors text-sm flex items-center gap-2">
                     <i class="fas fa-plus"></i>
-                    <span class="hidden sm:inline">New Recording</span>
+                    <span class="hidden sm:inline">上传新录音</span>
                 </button>
 
                 <!-- User menu -->
@@ -86,18 +85,18 @@
                     <!-- User dropdown -->
                     <div v-if="isUserMenuOpen"
                          class="absolute right-0 mt-2 w-56 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg z-50">
-                        <a href="/account" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
-                            <i class="fas fa-cog mr-2 w-4 text-center"></i>Account Settings
+			    <a href="/speakr/account" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
+                            <i class="fas fa-cog mr-2 w-4 text-center"></i>个人信息
                         </a>
                         {% if current_user.is_admin %}
-                        <a href="/admin" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
+                        <a href="/speakr/admin" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
                             <i class="fas fa-user-shield mr-2 w-4 text-center"></i>Admin
                         </a>
                         {% endif %}
                         <button @click="openSharesList" class="w-full text-left px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors flex items-center">
-                            <i class="fas fa-share-alt mr-2 w-4 text-center"></i>Shared Transcripts
+                            <i class="fas fa-share-alt mr-2 w-4 text-center"></i>已分享的录音
                         </button>
-                        <div class="border-t border-[var(--border-primary)] my-1"></div>
+                        <!-- <div class="border-t border-[var(--border-primary)] my-1"></div>
                         <button @click="toggleDarkMode" class="w-full text-left px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors flex items-center">
                             <i :class="isDarkMode ? 'fas fa-sun' : 'fas fa-moon'" class="mr-2 w-4 text-center"></i>
                             <span>${ isDarkMode ? 'Light Mode' : 'Dark Mode' }</span>
@@ -107,9 +106,9 @@
                             <span>Color Scheme</span>
                         </button>
                         <div class="border-t border-[var(--border-primary)] my-1"></div>
-                        <a href="/logout" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
+                        <a href="/speakr/logout" class="block px-4 py-2 hover:bg-[var(--bg-tertiary)] transition-colors">
                             <i class="fas fa-sign-out-alt mr-2 w-4 text-center"></i>Logout
-                        </a>
+			</a> -->
                     </div>
                 </div>
                 {% endif %}
@@ -129,10 +128,10 @@
                     <!-- Sidebar Header -->
                     <div class="p-4 border-b border-[var(--border-primary)] flex-shrink-0">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg font-semibold">Recordings</h2>
+                            <h2 class="text-lg font-semibold">录音列表</h2>
                             <button @click="switchToUploadView" 
                                     class="px-3 py-1.5 bg-[var(--bg-button)] text-[var(--text-button)] rounded-lg hover:bg-[var(--bg-button-hover)] transition-colors text-sm">
-                                <i class="fas fa-plus mr-1"></i>New
+                                <i class="fas fa-plus mr-1"></i>上传
                             </button>
                         </div>
                         
@@ -142,7 +141,7 @@
                             <div class="relative">
                                 <input v-model="searchQuery" 
                                        type="text" 
-                                       placeholder="Search recordings... (try: date:today, date:2025-01)" 
+                                       placeholder="搜索... (试试:“date:today”,“date:2025-01”)" 
                                        class="w-full px-3 py-2 pl-9 pr-8 bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring-focus)]">
                                 <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--text-muted)] text-sm"></i>
                                 <button v-if="searchQuery" 
@@ -157,7 +156,7 @@
                                     class="w-full flex items-center justify-between px-3 py-2 bg-[var(--bg-input)] border border-[var(--border-secondary)] rounded-lg text-sm hover:bg-[var(--bg-tertiary)] transition-colors">
                                 <span class="flex items-center">
                                     <i :class="['fas mr-2 text-[var(--text-muted)]', sortBy === 'meeting_date' ? 'fa-calendar' : 'fa-upload']"></i>
-                                    Sort by: ${sortBy === 'meeting_date' ? 'Meeting Date' : 'Upload Date'}
+                                    排序: ${sortBy === 'meeting_date' ? 'Meeting Date' : 'Upload Date'}
                                 </span>
                                 <i class="fas fa-exchange-alt text-[var(--text-muted)]"></i>
                             </button>
@@ -165,13 +164,13 @@
                             <!-- Search Help -->
                             <div class="text-xs text-[var(--text-muted)] space-y-1">
                                 <button @click="searchTipsExpanded = !searchTipsExpanded" class="flex items-center justify-between w-full text-left">
-                                    <span>Search tips:</span>
+                                    <span>搜索小提示:</span>
                                     <i :class="['fas', 'fa-chevron-down', 'transition-transform', { 'rotate-180': searchTipsExpanded }]"></i>
                                 </button>
                                 <div v-if="searchTipsExpanded" class="pl-2 space-y-0.5 pt-1">
-                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:today</code> - Today's recordings</div>
-                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:2025-01</code> - January 2025</div>
-                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:thisweek</code> - This week</div>
+                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:today</code> - 今天的录音</div>
+                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:2025-01</code> - 指定年月</div>
+                                    <div>• <code class="bg-[var(--bg-tertiary)] px-1 rounded">date:thisweek</code> - 本周的</div>
                                 </div>
                             </div>
                         </div>
@@ -181,12 +180,12 @@
                     <div class="flex-1 overflow-y-auto p-4">
                         <div v-if="isLoadingRecordings" class="text-center py-8">
                             <i class="fas fa-spinner fa-spin text-2xl text-[var(--text-muted)]"></i>
-                            <p class="mt-2 text-[var(--text-muted)]">Loading recordings...</p>
+                            <p class="mt-2 text-[var(--text-muted)]">正在打开...</p>
                         </div>
                         
                         <div v-else-if="filteredRecordings.length === 0" class="text-center py-8">
                             <i class="fas fa-microphone-slash text-3xl text-[var(--text-muted)] mb-3"></i>
-                            <p class="text-[var(--text-muted)]">No recordings found</p>
+                            <p class="text-[var(--text-muted)]">这里没有发现任何录音文件</p>
                         </div>
                         
                         <div v-else class="space-y-2">
@@ -267,8 +266,8 @@
                 <div v-if="dragover" class="absolute inset-0 bg-[var(--bg-accent)] bg-opacity-90 flex items-center justify-center z-50 pointer-events-none">
                     <div class="text-center p-8 bg-[var(--bg-secondary)] rounded-xl shadow-2xl border-2 border-dashed border-[var(--border-accent)]">
                         <i class="fas fa-cloud-upload-alt text-6xl text-[var(--text-accent)] mb-4"></i>
-                        <h3 class="text-2xl font-bold text-[var(--text-primary)] mb-2">Drop Audio Files Here</h3>
-                        <p class="text-[var(--text-muted)]">Release to upload your audio files</p>
+                        <h3 class="text-2xl font-bold text-[var(--text-primary)] mb-2">录音文件放于此处</h3>
+                        <p class="text-[var(--text-muted)]">松开按键开始上传</p>
                     </div>
                 </div>
 
@@ -278,8 +277,8 @@
                     <div class="max-w-lg w-full">
                         <div class="text-center mb-8">
                             <i class="fas fa-microphone text-5xl md:text-6xl text-[var(--text-accent)] mb-4"></i>
-                            <h2 class="text-2xl md:text-3xl font-bold mb-2">Upload or Record Audio</h2>
-                            <p class="text-[var(--text-muted)]">Drag and drop an audio file, click to browse, or start a new recording.</p>
+                            <h2 class="text-2xl md:text-3xl font-bold mb-2">上传 或 录制</h2>
+                            <p class="text-[var(--text-muted)]">可以把录音文件拖拽到此处, 或点击这里打开文件窗口, 也可以现在就进行录音</p>
                         </div>
                         
                         <div class="bg-[var(--bg-secondary)] p-6 rounded-xl border border-[var(--border-primary)]">
@@ -287,8 +286,8 @@
                             <div @drop="handleDrop" @dragover="handleDragOver" @dragleave="handleDragLeave" @click="$refs.fileInput.click()"
                                  :class="['border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300', dragover ? 'border-[var(--border-accent)] bg-[var(--bg-accent)]' : 'border-[var(--border-secondary)] hover:border-[var(--border-accent)]']">
                                 <i class="fas fa-cloud-upload-alt text-3xl text-[var(--text-muted)] mb-3"></i>
-                                <p class="text-[var(--text-secondary)] mb-2">Click to upload or drag and drop</p>
-                                <p class="text-xs text-[var(--text-muted)]">Supports MP3, WAV, M4A, AMR, and more</p>
+                                <p class="text-[var(--text-secondary)] mb-2">点击查找文件 或者拖放于此处</p>
+                                <p class="text-xs text-[var(--text-muted)]">支持格式：MP3, WAV, M4A, AMR 等</p>
                             </div>
                             <input ref="fileInput" type="file" @change="handleFileSelect" accept="audio/*" multiple class="hidden">
 
@@ -307,7 +306,7 @@
                                 <button @click="startRecording('microphone')"
                                         class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
                                     <i class="fas fa-microphone"></i>
-                                    <span>Record Microphone</span>
+                                    <span>从麦克风录制</span>
                                 </button>
                                 
                                 <!-- System Audio Recording -->
@@ -315,7 +314,7 @@
                                         v-if="canRecordSystemAudio"
                                         class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                                     <i class="fas fa-desktop"></i>
-                                    <span>Record System Audio</span>
+                                    <span>从电脑指定源录制</span>
                                 </button>
                                 
                                 <!-- Both Audio Sources -->
@@ -324,21 +323,21 @@
                                         class="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
                                     <i class="fas fa-microphone"></i>
                                     <i class="fas fa-desktop ml-1"></i>
-                                    <span>Record Both</span>
+                                    <span>两者都录</span>
                                 </button>
                                 
                                 <!-- Help Text -->
                                 <div class="text-xs text-[var(--text-muted)] space-y-1 mt-3">
                                     <div class="flex items-center justify-between">
-                                        <span><strong>Microphone:</strong> Records your voice only</span>
+                                        <span><strong>Microphone:</strong> 只录制你的发言</span>
                                         <i class="fas fa-microphone text-red-500 flex-shrink-0"></i>
                                     </div>
                                     <div v-if="canRecordSystemAudio" class="flex items-center justify-between">
-                                        <span><strong>System Audio:</strong> Records meeting participants and system sounds</span>
+                                        <span><strong>System Audio:</strong> 录制所有其他人的发言和电脑播放的声音</span>
                                         <i class="fas fa-desktop text-blue-500 flex-shrink-0"></i>
                                     </div>
                                     <div v-if="canRecordSystemAudio" class="flex items-center justify-between">
-                                        <span><strong>Both:</strong> Records your voice + meeting participants (recommended for online meetings)</span>
+                                        <span><strong>Both:</strong> 录制你和电脑的所有声音 (网络会议推荐这个模式)</span>
                                         <div class="flex items-center gap-1 flex-shrink-0">
                                             <i class="fas fa-microphone text-purple-500"></i>
                                             <i class="fas fa-desktop text-purple-500"></i>
@@ -346,9 +345,9 @@
                                     </div>
                                     <div v-if="!canRecordSystemAudio" class="text-amber-600 dark:text-amber-400">
                                         <i class="fas fa-exclamation-triangle mr-1"></i>
-                                        System audio recording not supported in this browser
+                                        此浏览器不支持从电脑指定源录制
                                         <button @click="showSystemAudioHelp = true" class="ml-2 text-blue-500 hover:text-blue-600 underline text-sm">
-                                            Help
+                                            求助
                                         </button>
                                     </div>
                                 </div>
@@ -391,7 +390,7 @@
                             </div>
                             <div>
                                 <div class="text-2xl font-mono text-[var(--text-accent)]">${formatTime(recordingTime)}</div>
-                                <p class="text-sm text-[var(--text-muted)]">${ isRecording ? 'Recording in progress...' : 'Recording finished' }</p>
+                                <p class="text-sm text-[var(--text-muted)]">${ isRecording ? '正在录音...' : '录音完成' }</p>
                             </div>
                         </div>
                         
@@ -399,7 +398,7 @@
                         <div class="flex-1 p-4 md:p-6 min-h-0 overflow-hidden flex flex-col">
                             <label for="recordingNotes" class="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex-shrink-0">
                                 <i class="fas fa-pencil-alt mr-1"></i>
-                                Recording Notes (Markdown)
+                                录音笔记 (Markdown)
                             </label>
                             <div class="flex-1 min-h-0 recording-notes-editor">
                                 <textarea ref="recordingNotesEditor" v-model="recordingNotes"
@@ -490,7 +489,7 @@
                         <div class="bg-[var(--bg-secondary)] p-4 border-b border-[var(--border-primary)] flex-shrink-0">
                             <div class="audio-player-container">
                                 <audio controls 
-                                       :src="'/audio/' + selectedRecording.id" 
+                                       :src="BASE_PATH + '/audio/' + selectedRecording.id" 
                                        :volume="playerVolume"
                                        @volumechange="onPlayerVolumeChange"
                                        class="w-full">
@@ -703,7 +702,7 @@
                                         <span v-if="!editingParticipants" 
                                               @click="toggleEditParticipants"
                                               class="cursor-pointer hover:text-[var(--text-accent)] transition-colors">
-                                            ${selectedRecording.participants || 'No participants'}
+                                            ${selectedRecording.participants || '未编辑参会人'}
                                         </span>
                                         <input v-else 
                                                v-model="selectedRecording.participants" 
@@ -718,7 +717,7 @@
                                         <span v-if="!editingMeetingDate" 
                                               @click="toggleEditMeetingDate"
                                               class="cursor-pointer hover:text-[var(--text-accent)] transition-colors">
-                                            ${selectedRecording.meeting_date ? formatDisplayDate(selectedRecording.meeting_date) : 'No date set'}
+                                            ${selectedRecording.meeting_date ? formatDisplayDate(selectedRecording.meeting_date) : '未填会议日期'}
                                         </span>
                                         <input v-else 
                                                v-model="selectedRecording.meeting_date" 
@@ -754,31 +753,31 @@
                                 <div class="bg-[var(--bg-tertiary)] px-4 py-3 border-b border-[var(--border-primary)] flex items-center justify-between">
                                     <h3 class="font-semibold flex items-center">
                                         <i class="fas fa-file-text mr-2"></i>
-                                        Transcription
+                                        录音抄本
                                     </h3>
                                     <div class="flex items-center gap-2">
                                         <!-- View Mode Toggle -->
                                         <div v-if="processedTranscription.hasDialogue" class="view-mode-toggle">
                                             <button @click="toggleTranscriptionViewMode" 
                                                     :class="['toggle-button', transcriptionViewMode === 'simple' ? 'active' : '']">
-                                                <i class="fas fa-list"></i>Simple
+                                                <i class="fas fa-list"></i>普通布局
                                             </button>
                                             <button @click="toggleTranscriptionViewMode" 
                                                     :class="['toggle-button', transcriptionViewMode === 'bubble' ? 'active' : '']">
-                                                <i class="fas fa-comments"></i>Bubble
+                                                <i class="fas fa-comments"></i>聊天泡
                                             </button>
                                         </div>
                                         
                                         <!-- Copy Button -->
                                         <button @click="copyTranscription" 
                                                 class="copy-btn">
-                                            <i class="fas fa-copy mr-1"></i>Copy
+                                            <i class="fas fa-copy mr-1"></i>复制到剪贴板
                                         </button>
                                         <!-- Edit Transcription Button -->
                                         <button @click="openTranscriptionEditor"
                                                 v-if="selectedRecording && selectedRecording.transcription"
                                                 class="copy-btn">
-                                            <i class="fas fa-edit mr-1"></i>Edit
+                                            <i class="fas fa-edit mr-1"></i>编辑抄本
                                         </button>
                                     </div>
                                 </div>
@@ -787,12 +786,12 @@
                                 <div class="flex-1 overflow-y-auto p-4">
                                     <div v-if="selectedRecording.status === 'PROCESSING'" class="text-center py-8">
                                         <i class="fas fa-spinner fa-spin text-2xl text-[var(--text-muted)]"></i>
-                                        <p class="mt-2 text-[var(--text-muted)]">Processing transcription...</p>
+                                        <p class="mt-2 text-[var(--text-muted)]">正在从音频转录到抄本...</p>
                                     </div>
                                     
                                     <div v-else-if="!selectedRecording.transcription" class="text-center py-8">
                                         <i class="fas fa-file-text text-3xl text-[var(--text-muted)] mb-3"></i>
-                                        <p class="text-[var(--text-muted)]">No transcription available</p>
+                                        <p class="text-[var(--text-muted)]">找不到可用的抄本</p>
                                     </div>
                                     
                                     <!-- Speaker Legend (for dialogue transcriptions in bubble view only) -->
@@ -801,7 +800,7 @@
                                         <div class="speaker-legend-header" @click="legendExpanded = !legendExpanded">
                                             <div class="speaker-legend-title">
                                                 <i class="fas fa-users"></i>
-                                                Speakers
+                                                发言人
                                                 <span class="speaker-count-indicator">(${processedTranscription.speakers.length})</span>
                                             </div>
                                             <i class="fas fa-chevron-down speaker-legend-toggle"></i>
@@ -881,7 +880,7 @@
                                 <div class="bg-[var(--bg-secondary)] p-4 border-b border-[var(--border-primary)] flex-shrink-0">
                                     <div class="audio-player-container">
                                         <audio controls 
-                                               :src="'/audio/' + selectedRecording.id" 
+                                               :src="BASE_PATH + '/audio/' + selectedRecording.id" 
                                                :volume="playerVolume"
                                                @volumechange="onPlayerVolumeChange"
                                                class="w-full">
@@ -901,7 +900,7 @@
                                                         ? 'bg-[var(--bg-secondary)] text-[var(--text-accent)] border-b-2 border-[var(--border-focus)]' 
                                                         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                                                 ]">
-                                            Summary
+                                            录音总结
                                         </button>
                                         <button @click="selectedTab = 'notes'" 
                                                 :class="[
@@ -910,7 +909,7 @@
                                                         ? 'bg-[var(--bg-secondary)] text-[var(--text-accent)] border-b-2 border-[var(--border-focus)]' 
                                                         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                                                 ]">
-                                            Notes
+                                            笔记/注记
                                         </button>
                                     </div>
 
@@ -920,19 +919,19 @@
                                         <div v-if="selectedTab === 'summary'" class="h-full p-4 overflow-y-auto">
                                             <div v-if="selectedRecording.status === 'SUMMARIZING'" class="text-center py-8">
                                                 <i class="fas fa-spinner fa-spin text-2xl text-[var(--text-muted)]"></i>
-                                                <p class="mt-2 text-[var(--text-muted)]">Generating summary...</p>
+                                                <p class="mt-2 text-[var(--text-muted)]">正在进行总结...</p>
                                             </div>
                                             
                                             <div v-else-if="!selectedRecording.summary" class="text-center py-8">
                                                 <i class="fas fa-file-alt text-3xl text-[var(--text-muted)] mb-3"></i>
-                                                <p class="text-[var(--text-muted)]">No summary available</p>
+                                                <p class="text-[var(--text-muted)]">找不到可用的总结</p>
                                             </div>
                                             
                                             <div v-else class="content-box">
                                                 <button v-if="!editingSummary" 
                                                         @click="toggleEditSummary" 
                                                         class="hover-edit-btn">
-                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                    <i class="fas fa-edit mr-1"></i>修改
                                                 </button>
                                                 
                                                 <div v-if="!editingSummary" 
@@ -950,11 +949,11 @@
                                                     <div class="flex justify-end gap-2 mt-2">
                                                         <button @click="cancelEditSummary" 
                                                                 class="px-3 py-1 text-sm bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-secondary)] rounded hover:bg-[var(--bg-tertiary)]">
-                                                            Cancel
+                                                            取消
                                                         </button>
                                                         <button @click="saveEditSummary" 
                                                                 class="px-3 py-1 text-sm bg-[var(--bg-button)] text-[var(--text-button)] rounded hover:bg-[var(--bg-button-hover)]">
-                                                            Save
+                                                            保存
                                                         </button>
                                                     </div>
                                                 </div>
@@ -967,7 +966,7 @@
                                                 <button v-if="!editingNotes" 
                                                         @click="toggleEditNotes" 
                                                         class="hover-edit-btn">
-                                                    <i class="fas fa-edit mr-1"></i>Edit
+                                                    <i class="fas fa-edit mr-1"></i>编辑
                                                 </button>
                                                 
                                                 <div v-if="!editingNotes" 
@@ -980,7 +979,7 @@
                                                         ${selectedRecording.notes}
                                                     </div>
                                                     <div v-else class="text-[var(--text-muted)] italic">
-                                                        Click to add notes...
+                                                        点击添加第一篇笔记...
                                                     </div>
                                                 </div>
                                                 
@@ -995,11 +994,11 @@
                                                     <div class="flex justify-end gap-2 mt-2">
                                                         <button @click="cancelEditNotes" 
                                                                 class="px-3 py-1 text-sm bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-secondary)] rounded hover:bg-[var(--bg-tertiary)]">
-                                                            Cancel
+                                                            取消
                                                         </button>
                                                         <button @click="saveEditNotes" 
                                                                 class="px-3 py-1 text-sm bg-[var(--bg-button)] text-[var(--text-button)] rounded hover:bg-[var(--bg-button-hover)]">
-                                                            Save
+                                                            保存
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1015,7 +1014,7 @@
                                             class="bg-[var(--bg-tertiary)] px-4 py-3 text-left hover:bg-[var(--bg-accent-hover)] transition-colors flex items-center justify-between">
                                         <span class="font-medium flex items-center">
                                             <i class="fas fa-comments mr-2"></i>
-                                            Chat with Transcription
+                                            基于本篇抄本进行问答
                                         </span>
                                         <i :class="['fas transition-transform duration-200', showChat ? 'fa-chevron-down' : 'fa-chevron-up']"></i>
                                     </button>
@@ -1027,7 +1026,7 @@
                                              class="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--bg-secondary)]">
                                             <div v-if="chatMessages.length === 0" class="text-center py-8">
                                                 <i class="fas fa-robot text-3xl text-[var(--text-muted)] mb-3"></i>
-                                                <p class="text-[var(--text-muted)]">Ask questions about this transcription</p>
+                                                <p class="text-[var(--text-muted)]">有什么问题想问？</p>
                                             </div>
                                             
                                             <div v-for="(message, index) in chatMessages" 
@@ -1049,7 +1048,7 @@
                                             
                                             <div v-if="isChatLoading" class="ai-message">
                                                 <i class="fas fa-spinner fa-spin mr-2"></i>
-                                                Thinking...
+                                                小声嘀咕...
                                             </div>
                                         </div>
 
@@ -1071,7 +1070,7 @@
                                             </div>
                                             <p v-if="selectedRecording.status !== 'COMPLETED'" 
                                                class="text-xs text-[var(--text-muted)] mt-2">
-                                                Chat will be available once transcription is complete
+                                                等音频被转录成抄本以后，就可以基于内容开始问答
                                             </p>
                                         </div>
                                     </div>
@@ -1089,7 +1088,7 @@
                         <p class="text-[var(--text-muted)] mb-6">Choose a recording from the sidebar to view its transcription and summary</p>
                         <button @click="switchToUploadView" 
                                 class="px-6 py-3 bg-[var(--bg-button)] text-[var(--text-button)] rounded-lg hover:bg-[var(--bg-button-hover)] transition-colors">
-                            <i class="fas fa-plus mr-2"></i>Upload New Recording
+                            <i class="fas fa-plus mr-2"></i>上传新录音
                         </button>
                     </div>
                 </div>
@@ -1107,7 +1106,7 @@
                 <div class="bg-[var(--bg-tertiary)] px-4 py-3 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <i class="fas fa-upload text-[var(--text-accent)]"></i>
-                        <span class="font-medium">Upload Progress</span>
+                        <span class="font-medium">上传进度</span>
                         <span class="text-sm text-[var(--text-muted)]">(${completedInQueue}/${totalInQueue})</span>
                     </div>
                     <div class="flex items-center gap-2">
@@ -1150,7 +1149,7 @@
                                 'text-xs',
                                 item.status === 'completed' ? 'text-green-600' : 'text-red-600'
                             ]">
-                                ${item.status === 'completed' ? 'Done' : 'Failed'}
+                                ${item.status === 'completed' ? '成功' : '出错'}
                             </span>
                         </div>
                     </div>
@@ -1613,7 +1612,7 @@
                         <div class="mb-4 flex-shrink-0">
                             <h4 class="font-semibold text-[var(--text-secondary)] mb-2">Audio Player</h4>
                             <div class="bg-[var(--bg-audio-player)] p-3 rounded-lg shadow border border-[var(--border-primary)]">
-                                <audio controls class="w-full h-10 speaker-modal-transcript" :key="selectedRecording.id" :src="'/audio/' + selectedRecording.id" :volume="playerVolume" @volumechange="onPlayerVolumeChange">
+                                <audio controls class="w-full h-10 speaker-modal-transcript" :key="selectedRecording.id" :src="BASE_PATH + '/audio/' + selectedRecording.id" :volume="playerVolume" @volumechange="onPlayerVolumeChange">
                                     Your browser does not support the audio element.
                                 </audio>
                             </div>

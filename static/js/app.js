@@ -1,14 +1,17 @@
+// 在文件顶部，Vue应用创建之前添加  
+const BASE_PATH = window.location.pathname.includes('/speakr/') ? '/speakr' : '';
+
 const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue
 
 // Wait for the DOM to be fully loaded before mounting the Vue app
 document.addEventListener('DOMContentLoaded', () => {
     // CSRF Protection for Fetch API
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    //const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const originalFetch = window.fetch;
     window.fetch = function(url, options) {
         const newOptions = { ...options };
         newOptions.headers = {
-            'X-CSRFToken': csrfToken,
+            //'X-CSRFToken': csrfToken,
             ...newOptions.headers
         };
         return originalFetch(url, newOptions);
@@ -680,6 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 switch(status) {
                     case 'PENDING': return 'status-pending';
                     case 'PROCESSING': return 'status-processing';
+                    case 'QUEUED': return 'status-queued';
                     case 'SUMMARIZING': return 'status-summarizing';
                     case 'COMPLETED': return '';
                     case 'FAILED': return 'status-failed';
@@ -805,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!recording) return;
 
                 try {
-                    const response = await fetch(`/recording/${recording.id}/reset_status`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recording.id}/reset_status`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                     });
@@ -870,7 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Populate available speakers
                     const speakersInTranscript = [...new Set(segments.map(s => s.speaker))];
-                    const response = await fetch('/speakers');
+                    const response = await fetch(`${BASE_PATH}/speakers`);
                     const speakersFromDb = await response.json();
                     const speakerNamesFromDb = speakersFromDb.map(s => s.name);
                     availableSpeakers.value = [...new Set([...speakersInTranscript, ...speakerNamesFromDb])].sort();
@@ -950,7 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const saveTranscriptionContent = async (content) => {
                 if (!selectedRecording.value) return;
                 try {
-                    const response = await fetch(`/recording/${selectedRecording.value.id}/update_transcription`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${selectedRecording.value.id}/update_transcription`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ transcription: content })
@@ -1009,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         max_speakers: maxSpeakers
                     };
     
-                    const response = await fetch(`/recording/${recordingId}/reprocess_transcription`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recordingId}/reprocess_transcription`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -1050,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 try {
-                    const response = await fetch(`/recording/${recordingId}/reprocess_summary`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recordingId}/reprocess_summary`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -1128,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const pollInterval = setInterval(async () => {
                     try {
-                        const response = await fetch(`/status/${recordingId}`);
+                        const response = await fetch(`${BASE_PATH}/status/${recordingId}`);
                         if (!response.ok) {
                             console.error(`Status check failed for recording ${recordingId}`);
                             stopReprocessingPoll(recordingId);
@@ -1195,8 +1199,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 reprocessingPolls.value.set(recordingId, pollInterval);
             };
             
-            const updateReprocessingProgress = (status, queueItem) => {
-                switch (status) {
+            const updateReprocessingProgress = (status, queueItem, data) => {
+	    // 检查队列状态  
+		if (data.summary_queue_status === 'QUEUED') {  
+                    processingProgress.value = 15;  
+                    processingMessage.value = `Waiting in summary queue (position ${data.queue_position || 'unknown'})...`;  
+                    return;  
+                }  
+		switch (status) {
                     case 'PENDING':
                         processingProgress.value = 20;
                         processingMessage.value = `Waiting to start ${queueItem.reprocessType} reprocessing...`;
@@ -1208,10 +1218,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             : 'Processing audio...';
                         break;
                     case 'SUMMARIZING':
-                        processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));
-                        processingMessage.value = queueItem.reprocessType === 'summary' 
-                            ? 'Regenerating summary...' 
-                            : 'Generating title and summary...';
+                        if (data.summary_queue_status === 'PROCESSING') {  
+                            processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));  
+                            processingMessage.value = 'Generating summary...';  
+                        } else {  
+                            processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));  
+                            processingMessage.value = queueItem.reprocessType === 'summary'   
+                                ? 'Regenerating summary...'   
+                                : 'Generating title and summary...';  
+                        } 
+//                        processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));
+//                        processingMessage.value = queueItem.reprocessType === 'summary' 
+//                            ? 'Regenerating summary...' 
+//                            : 'Generating title and summary...';
                         break;
                     case 'COMPLETED':
                         processingProgress.value = 100;
@@ -1253,7 +1272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cancelReset();
     
                 try {
-                    const response = await fetch(`/recording/${recordingId}/reset_status`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recordingId}/reset_status`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -1289,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingSuggestions.value[speakerId] = true;
                 
                 try {
-                    const response = await fetch(`/speakers/search?q=${encodeURIComponent(query)}`);
+                    const response = await fetch(`${BASE_PATH}/speakers/search?q=${encodeURIComponent(query)}`);
                     if (!response.ok) throw new Error('Failed to search speakers');
                     
                     const speakers = await response.json();
@@ -1351,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, {});
     
                 try {
-                    const response = await fetch(`/recording/${selectedRecording.value.id}/update_speakers`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${selectedRecording.value.id}/update_speakers`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1431,7 +1450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast('Starting automatic speaker identification...', 'fa-magic');
             
                 try {
-                    const response = await fetch(`/recording/${selectedRecording.value.id}/auto_identify_speakers`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${selectedRecording.value.id}/auto_identify_speakers`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1478,7 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!recording || !recording.id) return;
                 
                 try {
-                    const response = await fetch(`/recording/${recording.id}/toggle_inbox`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recording.id}/toggle_inbox`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -1507,7 +1526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!recording || !recording.id) return;
                 
                 try {
-                    const response = await fetch(`/recording/${recording.id}/toggle_highlight`, {
+                    const response = await fetch(`${BASE_PATH}/recording/${recording.id}/toggle_highlight`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' }
                     });
@@ -1744,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         processingMessage.value = 'Uploading file...';
                         processingProgress.value = 10;
 
-                        const response = await fetch('/upload', { method: 'POST', body: formData });
+                        const response = await fetch(`${BASE_PATH}/upload`, { method: 'POST', body: formData });
                         const data = await response.json();
 
                         if (!response.ok) {
@@ -1823,7 +1842,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         console.log(`Polling status for recording ID: ${recordingId} (${fileItem.file.name})`);
-                        const response = await fetch(`/status/${recordingId}`);
+                        const response = await fetch(`${BASE_PATH}/status/${recordingId}`);
                         if (!response.ok) throw new Error(`Status check failed with status ${response.status}`);
 
                         const data = await response.json();
@@ -1898,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 globalError.value = null;
                 isLoadingRecordings.value = true;
                 try {
-                    const response = await fetch('/recordings');
+                    const response = await fetch(`${BASE_PATH}/recordings`);
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Failed to load recordings');
                     recordings.value = data;
@@ -2205,7 +2224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         summary: recordingDataToSave.summary,
                         meeting_date: recordingDataToSave.meeting_date
                     };
-                    const response = await fetch('/save', {
+                    const response = await fetch(`${BASE_PATH}/save`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -2274,7 +2293,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const idToDelete = recordingToDelete.value.id;
                 const titleToDelete = recordingToDelete.value.title;
                 try {
-                    const response = await fetch(`/recording/${idToDelete}`, { method: 'DELETE' });
+                    const response = await fetch(`${BASE_PATH}/recording/${idToDelete}`, { method: 'DELETE' });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Failed to delete recording');
 
@@ -2535,7 +2554,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .slice(0, -1)
                         .map(msg => ({ role: msg.role, content: msg.content }));
 
-                    const response = await fetch('/chat', {
+                    const response = await fetch(`${BASE_PATH}/chat`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2910,7 +2929,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const createShare = async () => {
                 if (!recordingToShare.value) return;
                 try {
-                    const response = await fetch(`/api/recording/${recordingToShare.value.id}/share`, {
+                    const response = await fetch(`${BASE_PATH}/api/recording/${recordingToShare.value.id}/share`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(shareOptions)
@@ -2935,7 +2954,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isLoadingShares.value = true;
                 showSharesListModal.value = true;
                 try {
-                    const response = await fetch('/api/shares');
+                    const response = await fetch(`${BASE_PATH}/api/shares`);
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Failed to load shared items');
                     userShares.value = data;
@@ -2953,7 +2972,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const updateShare = async (share) => {
                 try {
-                    const response = await fetch(`/api/share/${share.id}`, {
+                    const response = await fetch(`${BASE_PATH}/api/share/${share.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2972,7 +2991,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const deleteShare = async (shareId) => {
                 if (!confirm('Are you sure you want to delete this share? This will revoke access to the public link.')) return;
                 try {
-                    const response = await fetch(`/api/share/${shareId}`, { method: 'DELETE' });
+                    const response = await fetch(`${BASE_PATH}/api/share/${shareId}`, { method: 'DELETE' });
                     const data = await response.json();
                     if (!response.ok) throw new Error(data.error || 'Failed to delete share');
                     userShares.value = userShares.value.filter(s => s.id !== shareId);
@@ -3051,7 +3070,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // --- Configuration Loading ---
             const loadConfiguration = async () => {
                 try {
-                    const response = await fetch('/api/config');
+                    const response = await fetch(`${BASE_PATH}/api/config`);
                     if (response.ok) {
                         const config = await response.json();
                         maxFileSizeMB.value = config.max_file_size_mb || 250;
@@ -3093,7 +3112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const pollInboxRecordings = async () => {
                 try {
-                    const response = await fetch('/api/inbox_recordings');
+                    const response = await fetch(`${BASE_PATH}/api/inbox_recordings`);
                     if (!response.ok) {
                         // Silently fail, as this is a background task
                         return;
@@ -3285,6 +3304,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             return {
+		// give con to html
+                BASE_PATH,  
+
                 // Core State
                 currentView, dragover, recordings, selectedRecording, selectedTab, searchQuery,
                 isLoadingRecordings, globalError, maxFileSizeMB, sortBy,

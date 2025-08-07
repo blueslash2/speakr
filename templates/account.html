@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ title }} - Speakr</title>
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/svg+xml">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="http://ai.byfunds.com/hystatic/tailwindcss.js"></script>
+    <link href="http://ai.byfunds.com/hystatic/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script>
+        const BASE_PATH='/speakr';
+
         // Function to apply the theme based on localStorage
         function applyTheme() {
             // Apply dark mode
@@ -47,7 +48,7 @@
             <h1 class="text-3xl font-bold text-[var(--text-primary)]">
                 <a href="{{ url_for('index') }}" class="flex items-center">
                     <img src="{{ url_for('static', filename='img/favicon.ico') }}" alt="Speakr Logo" class="h-9 w-9 mr-2">
-                    Speakr
+                    万象·会议录音助手
                 </a>
             </h1>
             <div class="flex items-center space-x-2">
@@ -61,20 +62,20 @@
                         <i class="fas fa-chevron-down ml-2"></i>
                     </button>
                     <div id="userDropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg z-10">
-                        <a href="{{ url_for('index') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
-                            <i class="fas fa-home mr-2"></i> Home
+                        <a href="/speakr" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
+                            <i class="fas fa-home mr-2"></i> 首页
                         </a>
-                        <a href="{{ url_for('account') }}" class="block px-4 py-2 text-[var(--text-accent)] bg-[var(--bg-accent)]">
-                            <i class="fas fa-user-circle mr-2"></i> Account
+                        <a href="/speakr/account" class="block px-4 py-2 text-[var(--text-accent)] bg-[var(--bg-accent)]">
+                            <i class="fas fa-user-circle mr-2"></i> 个人信息
                         </a>
                         {% if current_user.is_admin %}
-                        <a href="{{ url_for('admin') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
-                            <i class="fas fa-user-shield mr-2"></i> Admin
+                        <a href="/speakr/admin" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
+                            <i class="fas fa-user-shield mr-2"></i> 管理
                         </a>
                         {% endif %}
-                        <a href="{{ url_for('logout') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-danger)]">
-                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                        </a>
+                        <!-- <a href="/speakr/logout" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-danger)]">
+                            <i class="fas fa-sign-out-alt mr-2"></i> 离开
+			</a> -->
                     </div>
                 </div>
             </div>
@@ -85,16 +86,16 @@
                 <div class="mb-6 border-b border-[var(--border-primary)]">
                     <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                         <a href="#" id="tab-account" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-[var(--border-accent)] text-[var(--text-accent)]">
-                            Account Information
+                            个人信息
                         </a>
                         <a href="#" id="tab-shares" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[var(--border-secondary)]">
-                            Shared Transcripts
+                            分享的录音
                         </a>
                     </nav>
                 </div>
 
                 <div id="content-account">
-                    <h2 class="text-2xl font-semibold text-[var(--text-primary)] mb-6">Account Information</h2>
+                    <h2 class="text-2xl font-semibold text-[var(--text-primary)] mb-6">个人信息（录音助手）</h2>
                     {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -110,42 +111,41 @@
                     <div>
                         <form method="POST" action="{{ url_for('account') }}" class="space-y-6">
                             <div class="mb-6">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">Personal Information</h3>
+                                <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">个人资料</h3>
                                 <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-primary)] space-y-4">
                                     <div>
-                                        <label for="user_name" class="block text-sm font-medium text-[var(--text-muted)]">Full Name</label>
-                                        <input type="text" name="user_name" id="user_name" value="{{ current_user.name or '' }}" placeholder="Your full name" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
+                                        <label for="user_name" class="block text-sm font-medium text-[var(--text-muted)]">姓名</label>
+                                        <input type="text" name="user_name" id="user_name" value="{{ current_user.name or '' }}" placeholder="姓名" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]" readonly>
                                     </div>
+                                    <!-- <div>
+                                        <label for="user_job_title" class="block text-sm font-medium text-[var(--text-muted)]">岗位</label>
+                                        <input type="text" name="user_job_title" id="user_job_title" value="{{ current_user.job_title or '' }}" placeholder="如：软件工程师" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
+				    </div> -->
                                     <div>
-                                        <label for="user_job_title" class="block text-sm font-medium text-[var(--text-muted)]">Job Title</label>
-                                        <input type="text" name="user_job_title" id="user_job_title" value="{{ current_user.job_title or '' }}" placeholder="e.g., Software Engineer" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
-                                    </div>
-                                    <div>
-                                        <label for="user_company" class="block text-sm font-medium text-[var(--text-muted)]">Company / Organization</label>
-                                        <input type="text" name="user_company" id="user_company" value="{{ current_user.company or '' }}" placeholder="e.g., Acme Corp" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
+                                        <label for="user_company" class="block text-sm font-medium text-[var(--text-muted)]">部门</label>
+                                        <input type="text" name="user_company" id="user_company" value="{{ current_user.company or '' }}" placeholder="如：信息技术部" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]" readonly>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="mb-6">
-                                <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">Language & Prompt Preferences</h3>
+                                <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">个人设置</h3>
                                 <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-primary)] space-y-4">
                                     <div>
-                                        <label for="transcription_language" class="block text-sm font-medium text-[var(--text-muted)]">Transcription Language</label>
-                                        <input type="text" name="transcription_language" id="transcription_language" value="{{ current_user.transcription_language or '' }}" placeholder="e.g., en, es, zh (ISO 639-1 code)" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
-                                        <p class="text-xs text-[var(--text-light)] mt-1">Leave blank for auto-detection by transcription service.</p>
+                                        <label for="transcription_language" class="block text-sm font-medium text-[var(--text-muted)]">转录语种</label>
+                                        <input type="text" name="transcription_language" id="transcription_language" value="{{ current_user.transcription_language or '' }}" placeholder="如：en, es, zh (参考ISO639-1)" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]" readonly>
+                                        <p class="text-xs text-[var(--text-light)] mt-1">留空：自动。</p>
                                     </div>
                                     <div>
-                                        <label for="output_language" class="block text-sm font-medium text-[var(--text-muted)]">Preferred Output Language</label>
-                                        <input type="text" name="output_language" id="output_language" value="{{ current_user.output_language or '' }}" placeholder="e.g., English, Spanish, Chinese" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">
-                                        <p class="text-xs text-[var(--text-light)] mt-1">Language for titles, summaries, and chat. Leave blank for default (default behavior of your chosen model).</p>
+                                        <label for="output_language" class="block text-sm font-medium text-[var(--text-muted)]">AI答复语种</label>
+                                        <input type="text" name="output_language" id="output_language" value="{{ current_user.output_language or '' }}" placeholder="如：English, Spanish, Chinese" class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]" readonly>
+                                        <p class="text-xs text-[var(--text-light)] mt-1">AI就标题、总结、对话进行输出的语言。留空则按大模型自身设置输出。</p>
                                     </div>
-                                    <div>
+<!--                                    <div>
                                         <label for="summary_prompt" class="block text-sm font-medium text-[var(--text-muted)]">Custom Summary Prompt</label>
                                         <textarea name="summary_prompt" id="summary_prompt" rows="6" placeholder="Describe how you want your summaries structured. Leave blank to use the default prompt." class="mt-1 block w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--border-focus)] focus:border-[var(--border-focus)] sm:text-sm bg-[var(--bg-input)] text-[var(--text-primary)]">{{ current_user.summary_prompt or default_summary_prompt_text }}</textarea>
                                         <p class="text-xs text-[var(--text-light)] mt-1">This prompt will be used to generate the summary for your transcriptions. You can use placeholders like {{transcription}} and {{language_directive}} if needed, though the system will try to intelligently place the transcription content.</p>
-                                    </div>
+</div> -->
                                     {% if use_asr_endpoint %}
                                     <div>
                                         <label for="diarize" class="flex items-center text-sm font-medium text-[var(--text-muted)]">
@@ -156,13 +156,13 @@
                                                    {% else %}
                                                        {% if current_user.diarize %}checked{% endif %}
                                                    {% endif %}>
-                                            <span class="ml-2">Enable Diarization</span>
+                                            <span class="ml-2">启用发言人识别</span>
                                         </label>
                                         <p class="text-xs text-[var(--text-light)] mt-1">
-                                            When using the ASR endpoint, this will enable speaker diarization.
+                                            本系统已强制启用发言人识别。
                                             {% if asr_diarize_locked %}
                                                 <br>
-                                                <strong class="text-[var(--text-warn-strong)]">This setting is currently locked by the environment variable <code>ASR_DIARIZE</code>.</strong>
+                                                <strong class="text-[var(--text-warn-strong)]">由于系统开启了<code>ASR_DIARIZE</code>设置，因此已强制启用发言人识别。</strong>
                                             {% endif %}
                                         </p>
                                     </div>
@@ -170,21 +170,21 @@
                                 </div>
                             </div>
                             
-                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-[var(--bg-button)] text-[var(--text-button)] rounded-md hover:bg-[var(--bg-button-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
-                                <i class="fas fa-save mr-2"></i> Save All Preferences
-                            </button>
+                            <!-- <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 bg-[var(--bg-button)] text-[var(--text-button)] rounded-md hover:bg-[var(--bg-button-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
+                                <i class="fas fa-save mr-2"></i> 保存设置
+			    </button> -->
                         </form>
                     </div>
                     
                     <!-- Right Column: Stats, User Details, Account Actions -->
                     <div class="space-y-6">
                         <div>
-                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">Account Statistics</h3>
+                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">个人用量统计</h3>
                             <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-primary)]">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div class="text-center p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] shadow-sm">
                                         <span class="block text-3xl font-bold text-[var(--text-accent)]">{{ current_user.recordings|length }}</span>
-                                        <span class="block text-sm text-[var(--text-muted)]">Total Recordings</span>
+                                        <span class="block text-sm text-[var(--text-muted)]">总录音数</span>
                                     </div>
                                     
                                     <div class="text-center p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] shadow-sm">
@@ -192,7 +192,7 @@
                                             {% set completed_count = current_user.recordings|selectattr('status', 'equalto', 'COMPLETED')|list|length %}
                                             {{ completed_count }}
                                         </span>
-                                        <span class="block text-sm text-[var(--text-muted)]">Completed</span>
+                                        <span class="block text-sm text-[var(--text-muted)]">已处理</span>
                                     </div>
                                     
                                     <div class="text-center p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] shadow-sm">
@@ -200,7 +200,7 @@
                                             {% set processing_count = current_user.recordings|selectattr('status', 'in', ['PENDING', 'PROCESSING', 'SUMMARIZING'])|list|length %}
                                             {{ processing_count }}
                                         </span>
-                                        <span class="block text-sm text-[var(--text-muted)]">Processing</span>
+                                        <span class="block text-sm text-[var(--text-muted)]">处理中</span>
                                     </div>
                                     
                                     <div class="text-center p-4 bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] shadow-sm">
@@ -208,17 +208,17 @@
                                             {% set failed_count = current_user.recordings|selectattr('status', 'equalto', 'FAILED')|list|length %}
                                             {{ failed_count }}
                                         </span>
-                                        <span class="block text-sm text-[var(--text-muted)]">Failed</span>
+                                        <span class="block text-sm text-[var(--text-muted)]">出错</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-6"> <!-- Added mt-6 for spacing, was mb-6 on User Details -->
-                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">User Details</h3>
+                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">账户</h3>
                             <div class="bg-[var(--bg-tertiary)] p-4 rounded-lg border border-[var(--border-primary)]">
                                 <div class="mb-3">
-                                    <span class="block text-sm font-medium text-[var(--text-muted)]">Username</span>
+                                    <span class="block text-sm font-medium text-[var(--text-muted)]">账户名</span>
                                     <span class="block text-[var(--text-primary)]">{{ current_user.username }}</span>
                                 </div>
                                 <div class="mb-3">
@@ -229,16 +229,16 @@
                         </div>
                         
                         <div class="mt-6"> <!-- Added mt-6 for spacing, was mt-8 on Account Actions -->
-                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">Account Actions</h3>
+                            <h3 class="text-lg font-medium text-[var(--text-secondary)] mb-2">链接</h3>
                             <div class="flex flex-col space-y-3">
                                 <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 bg-[var(--bg-button)] text-[var(--text-button)] rounded-md hover:bg-[var(--bg-button-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
-                                    <i class="fas fa-microphone mr-2"></i> Go to Recordings
+                                    <i class="fas fa-microphone mr-2"></i> 回到主页
                                 </a>
-                                <button id="changePasswordBtn" class="inline-flex items-center px-4 py-2 border border-[var(--border-secondary)] text-[var(--text-secondary)] rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
-                                    <i class="fas fa-key mr-2"></i> Change Password
-                                </button>
+                                <!-- <button id="changePasswordBtn" class="inline-flex items-center px-4 py-2 border border-[var(--border-secondary)] text-[var(--text-secondary)] rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
+                                    <i class="fas fa-key mr-2"></i> 修改密码（无效）
+				</button> -->
                                 <button id="manageSpeakersBtn" class="inline-flex items-center px-4 py-2 border border-[var(--border-secondary)] text-[var(--text-secondary)] rounded-md hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--border-focus)] transition-colors duration-200">
-                                    <i class="fas fa-users mr-2"></i> Manage Speakers
+                                    <i class="fas fa-users mr-2"></i> 管理发言人信息
                                 </button>
                             </div>
                         </div>
@@ -247,7 +247,7 @@
                 </div>
 
                 <div id="content-shares" class="hidden">
-                    <h2 class="text-2xl font-semibold text-[var(--text-primary)] mb-6">My Shared Transcripts</h2>
+                    <h2 class="text-2xl font-semibold text-[var(--text-primary)] mb-6">分享的录音</h2>
                     <div id="shares-container" class="space-y-4">
                         <!-- Shares will be loaded here by JavaScript -->
                     </div>
@@ -268,7 +268,6 @@
                 <button id="closeModalBtn" class="text-[var(--text-light)] hover:text-[var(--text-muted)] text-2xl leading-none">&times;</button>
             </div>
             <form id="changePasswordForm" method="POST" action="{{ url_for('change_password') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="mb-4">
                     <label for="current_password" class="block text-sm font-medium text-[var(--text-secondary)] mb-1">Current Password</label>
                     <input type="password" id="current_password" name="current_password" required class="w-full px-3 py-2 border border-[var(--border-secondary)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--border-focus)] bg-[var(--bg-input)] text-[var(--text-primary)]">
@@ -405,7 +404,7 @@
             async function loadShares() {
                 sharesContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
                 try {
-                    const response = await fetch('/api/shares');
+                    const response = await fetch(`${BASE_PATH}/api/shares`);
                     const shares = await response.json();
                     if (!response.ok) throw new Error(shares.error || 'Failed to load');
                     
@@ -461,14 +460,14 @@
                 
                 try {
                     // Get CSRF token
-                    const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                    //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                     
                     const headers = {};
-                    if (csrfToken) {
-                        headers['X-CSRFToken'] = csrfToken;
-                    }
+                    //if (csrfToken) {
+                    //    headers['X-CSRFToken'] = csrfToken;
+                    //}
                     
-                    const response = await fetch(`/api/share/${shareId}`, { 
+                    const response = await fetch(`${BASE_PATH}/api/share/${shareId}`, { 
                         method: 'DELETE',
                         headers: headers
                     });
@@ -486,14 +485,14 @@
 
                 try {
                     // Get CSRF token
-                    const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                    //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                     
                     const headers = { 'Content-Type': 'application/json' };
-                    if (csrfToken) {
-                        headers['X-CSRFToken'] = csrfToken;
-                    }
+                    //if (csrfToken) {
+                    //    headers['X-CSRFToken'] = csrfToken;
+                    //}
                     
-                    const response = await fetch(`/api/share/${shareId}`, {
+                    const response = await fetch(`${BASE_PATH}/api/share/${shareId}`, {
                         method: 'PUT',
                         headers: headers,
                         body: JSON.stringify({ [prop]: value })
@@ -648,7 +647,7 @@
             showLoadingState();
             
             try {
-                const response = await fetch('/speakers');
+                const response = await fetch(`${BASE_PATH}/speakers`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
@@ -750,14 +749,14 @@
             
             try {
                 // Get CSRF token
-                const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                 
                 const headers = {};
-                if (csrfToken) {
-                    headers['X-CSRFToken'] = csrfToken;
-                }
+                //if (csrfToken) {
+                //    headers['X-CSRFToken'] = csrfToken;
+                //}
                 
-                const response = await fetch(`/speakers/${speakerId}`, {
+                const response = await fetch(`${BASE_PATH}/speakers/${speakerId}`, {
                     method: 'DELETE',
                     headers: headers
                 });
@@ -800,16 +799,16 @@
             
             try {
                 // Get CSRF token
-                const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                 
                 const headers = {};
-                if (csrfToken) {
-                    headers['X-CSRFToken'] = csrfToken;
-                }
+                //if (csrfToken) {
+                //    headers['X-CSRFToken'] = csrfToken;
+                //}
                 
                 // Delete all speakers one by one
                 const deletePromises = speakers.map(speaker => 
-                    fetch(`/speakers/${speaker.id}`, { 
+                    fetch(`${BASE_PATH}/speakers/${speaker.id}`, { 
                         method: 'DELETE',
                         headers: headers
                     })

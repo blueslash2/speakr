@@ -14,6 +14,8 @@ import json
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.wrappers import Response
 from sqlalchemy import select
 import threading
 from dotenv import load_dotenv # Import load_dotenv
@@ -61,7 +63,7 @@ app_logger.addHandler(handler)
 limiter = Limiter(
     get_remote_address,
     app=None,  # Defer initialization
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["2000 per day", "500 per hour"]
 )
 
 def auto_close_json(json_string):
@@ -389,6 +391,9 @@ def format_transcription_for_llm(transcription_text):
     return transcription_text
 
 app = Flask(__name__)
+app.config['WTF_CSRF_ENABLED'] = False
+app.config['APPLICATION_ROOT'] = '/speakr'
+
 # Use environment variables or default paths for Docker compatibility
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:////data/instance/transcriptions.db')
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/data/uploads')
@@ -462,6 +467,17 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+# 新增数据库模型
+class SummaryTask(db.Model):
+    __tablename__ = 'summary_tasks'
+    id = db.Column(db.Integer, primary_key=True)
+    recording_id = db.Column(db.Integer, db.ForeignKey('recording.id'), nullable=False)
+    status = db.Column(db.String(20), default='QUEUED')  # QUEUED, PROCESSING, COMPLETED, FAILED
+    custom_config = db.Column(db.Text)  # JSON string
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
 
 # --- Database Models ---
 class User(db.Model, UserMixin):
@@ -652,6 +668,7 @@ def password_check(form, field):
 
 # --- Share Routes ---
 @app.route('/share/<string:public_id>', methods=['GET'])
+@csrf.exempt
 def view_shared_recording(public_id):
     share = Share.query.filter_by(public_id=public_id).first_or_404()
     recording = share.recording
@@ -672,6 +689,7 @@ def view_shared_recording(public_id):
     return render_template('share.html', recording=recording_data)
 
 @app.route('/api/recording/<int:recording_id>/share', methods=['POST'])
+@csrf.exempt
 @login_required
 def create_share(recording_id):
     if not request.is_secure:
@@ -699,12 +717,14 @@ def create_share(recording_id):
     return jsonify({'success': True, 'share_url': share_url, 'share': share.to_dict()}), 201
 
 @app.route('/api/shares', methods=['GET'])
+@csrf.exempt
 @login_required
 def get_shares():
     shares = Share.query.filter_by(user_id=current_user.id).order_by(Share.created_at.desc()).all()
     return jsonify([share.to_dict() for share in shares])
 
 @app.route('/api/share/<int:share_id>', methods=['PUT'])
+@csrf.exempt
 @login_required
 def update_share(share_id):
     share = Share.query.filter_by(id=share_id, user_id=current_user.id).first_or_404()
@@ -719,6 +739,7 @@ def update_share(share_id):
     return jsonify({'success': True, 'share': share.to_dict()})
 
 @app.route('/api/share/<int:share_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def delete_share(share_id):
     share = Share.query.filter_by(id=share_id, user_id=current_user.id).first_or_404()
@@ -854,6 +875,24 @@ else:
     except Exception as client_init_e:
          app.logger.error(f"Failed to initialize OpenRouter client: {client_init_e}", exc_info=True)
 
+SUM_MODEL_API_KEY = os.environ.get("SUM_MODEL_API_KEY")
+SUM_MODEL_BASE_URL = os.environ.get("SUM_MODEL_BASE_URL", "https://openrouter.ai/api/v1")
+SUM_MODEL_NAME = os.environ.get("SUM_MODEL_NAME", "openai/gpt-3.5-turbo") # Default if not set
+sum_client_no_proxy = httpx.Client(verify=True) # verify=True is default, but good to be explicit
+if not SUM_MODEL_API_KEY:
+    app.logger.warning("SUM_MODEL_API_KEY not found. Summary generation DISABLED.")
+else:
+    try:
+        # ---> Pass the custom httpx_client <---
+        sumclient = OpenAI(
+            api_key=SUM_MODEL_API_KEY,
+            base_url=SUM_MODEL_BASE_URL,
+            http_client=sum_client_no_proxy # Pass the proxy-disabled client
+        )
+        app.logger.info(f"OpenRouter client initialized. Using model: {SUM_MODEL_NAME}")
+    except Exception as client_init_e:
+         app.logger.error(f"Failed to initialize OpenRouter client: {client_init_e}", exc_info=True)
+
 # Store details for the transcription client (potentially different)
 transcription_api_key = os.environ.get("TRANSCRIPTION_API_KEY", "cant-be-empty")
 transcription_base_url = os.environ.get("TRANSCRIPTION_BASE_URL", "https://openrouter.ai/api/v1")
@@ -879,7 +918,7 @@ def generate_summary_task(app_context, recording_id, start_time):
             app.logger.error(f"Error: Recording {recording_id} not found for summary generation.")
             return
 
-        if client is None:
+        if sumclient is None:
             app.logger.warning(f"Skipping summary for {recording_id}: OpenRouter client not configured.")
             recording.summary = "[Summary skipped: OpenRouter client not configured]"
             recording.status = 'COMPLETED'
@@ -962,8 +1001,8 @@ JSON Response:"""
             system_message_content += f" Ensure your response (both title and summary) is in {user_output_language}."
 
         try:
-            completion = client.chat.completions.create(
-                model=TEXT_MODEL_NAME,
+            completion = sumclient.chat.completions.create(
+                model=SUM_MODEL_NAME,
                 messages=[
                     {"role": "system", "content": system_message_content},
                     {"role": "user", "content": prompt_text}
@@ -1117,7 +1156,9 @@ def transcribe_audio_asr(app_context, recording_id, filepath, original_filename,
                     recording.transcription = json.dumps(simplified_segments)
             
             app.logger.info(f"ASR transcription completed for recording {recording_id}.")
-            generate_summary_task(app_context, recording_id, start_time)
+            #generate_summary_task(app_context, recording_id, start_time)
+            from task_queue import summary_queue
+            summary_queue.add_task(app_context, recording_id, start_time)
 
         except Exception as e:
             db.session.rollback()
@@ -1192,7 +1233,9 @@ def transcribe_audio_task(app_context, recording_id, filepath, filename_for_asr,
                 transcript = transcription_client.audio.transcriptions.create(**transcription_params)
             recording.transcription = transcript.text
             app.logger.info(f"Transcription completed for recording {recording_id}. Text length: {len(recording.transcription)}")
-            generate_summary_task(app_context, recording_id, start_time)
+#            generate_summary_task(app_context, recording_id, start_time)
+            from task_queue import summary_queue
+            summary_queue.add_task(app_context, recording_id, start_time)
 
         except Exception as e:
             db.session.rollback() # Rollback if any step failed critically
@@ -1214,6 +1257,7 @@ def transcribe_audio_task(app_context, recording_id, filepath, filename_for_asr,
                 db.session.commit()
 
 @app.route('/speakers', methods=['GET'])
+@csrf.exempt
 @login_required
 def get_speakers():
     """Get all speakers for the current user, ordered by usage frequency and recency."""
@@ -1227,6 +1271,7 @@ def get_speakers():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/speakers/search', methods=['GET'])
+@csrf.exempt
 @login_required
 def search_speakers():
     """Search speakers by name for autocomplete functionality."""
@@ -1247,6 +1292,7 @@ def search_speakers():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/speakers', methods=['POST'])
+@csrf.exempt
 @login_required
 def create_speaker():
     """Create a new speaker or update existing one."""
@@ -1285,6 +1331,7 @@ def create_speaker():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/speakers/<int:speaker_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def delete_speaker(speaker_id):
     """Delete a speaker."""
@@ -1303,6 +1350,7 @@ def delete_speaker(speaker_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/speakers/delete_all', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def delete_all_speakers():
     """Delete all speakers for the current user."""
@@ -1348,6 +1396,7 @@ def update_speaker_usage(speaker_names):
         db.session.rollback()
 
 @app.route('/recording/<int:recording_id>/update_speakers', methods=['POST'])
+@csrf.exempt
 @login_required
 def update_speakers(recording_id):
     """Updates speaker labels in a transcription with provided names."""
@@ -1432,12 +1481,14 @@ def update_speakers(recording_id):
         if regenerate_summary:
             app.logger.info(f"Regenerating summary for recording {recording_id} after speaker update.")
             start_time = datetime.utcnow()
-            thread = threading.Thread(
-                target=generate_summary_task,
-                args=(app.app_context(), recording.id, start_time)
-            )
-            thread.start()
-        
+            #thread = threading.Thread(
+            #    target=generate_summary_task,
+            #    args=(app.app_context(), recording.id, start_time)
+            #)
+            #thread.start()
+            from task_queue import summary_queue
+            summary_queue.add_task(app.app_context(), recording.id, start_time)
+
         return jsonify({
             'success': True, 
             'message': 'Speakers updated successfully.',
@@ -1590,6 +1641,7 @@ JSON Response:
         raise
 
 @app.route('/recording/<int:recording_id>/auto_identify_speakers', methods=['POST'])
+@csrf.exempt
 @login_required
 def auto_identify_speakers(recording_id):
     """
@@ -1644,6 +1696,7 @@ def auto_identify_speakers(recording_id):
 
 # --- Chat with Transcription ---
 @app.route('/chat', methods=['POST'])
+@csrf.exempt
 @login_required
 def chat_with_transcription():
     try:
@@ -1748,6 +1801,7 @@ Additional context and notes about the meeting:
 
 # --- Reprocessing Endpoints ---
 @app.route('/recording/<int:recording_id>/reprocess_transcription', methods=['POST'])
+@csrf.exempt
 @login_required
 def reprocess_transcription(recording_id):
     """Reprocess transcription for a given recording."""
@@ -1856,6 +1910,7 @@ def reprocess_transcription(recording_id):
 
 
 @app.route('/recording/<int:recording_id>/reprocess_summary', methods=['POST'])
+@csrf.exempt
 @login_required
 def reprocess_summary(recording_id):
     """Reprocess summary for a given recording (requires existing transcription)."""
@@ -2094,11 +2149,13 @@ JSON Response:"""
                     recording.status = 'COMPLETED'
                     db.session.commit()
         
-        thread = threading.Thread(
-            target=reprocess_summary_task,
-            args=(app.app_context(), recording.id)
-        )
-        thread.start()
+        #thread = threading.Thread(
+        #    target=reprocess_summary_task,
+        #    args=(app.app_context(), recording.id)
+        #)
+        #thread.start()
+        from task_queue import summary_queue
+        summary_queue.add_task(app.app_context(), recording.id, datetime.utcnow())
         
         return jsonify({
             'success': True, 
@@ -2112,6 +2169,7 @@ JSON Response:"""
         return jsonify({'error': str(e)}), 500
 
 @app.route('/recording/<int:recording_id>/reset_status', methods=['POST'])
+@csrf.exempt
 @login_required
 def reset_status(recording_id):
     """Resets the status of a stuck or failed recording."""
@@ -2169,6 +2227,7 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 @app.route('/login', methods=['GET', 'POST'])
+@csrf.exempt
 @limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
@@ -2195,6 +2254,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/account', methods=['GET', 'POST'])
+@csrf.exempt
 @login_required
 def account():
     if request.method == 'POST':
@@ -2233,6 +2293,7 @@ def account():
                            asr_diarize_env_value=ASR_DIARIZE)
 
 @app.route('/change_password', methods=['POST'])
+@csrf.exempt
 @login_required
 @limiter.limit("10 per minute")
 def change_password():
@@ -2270,6 +2331,7 @@ def change_password():
 
 # --- Admin Routes ---
 @app.route('/admin', methods=['GET'])
+@csrf.exempt
 @login_required
 def admin():
     # Check if user is admin
@@ -2279,6 +2341,7 @@ def admin():
     return render_template('admin.html', title='Admin Dashboard')
 
 @app.route('/admin/users', methods=['GET'])
+@csrf.exempt
 @login_required
 def admin_get_users():
     # Check if user is admin
@@ -2305,6 +2368,7 @@ def admin_get_users():
     return jsonify(user_data)
 
 @app.route('/admin/users', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_add_user():
     # Check if user is admin
@@ -2350,6 +2414,7 @@ def admin_add_user():
     }), 201
 
 @app.route('/admin/users/<int:user_id>', methods=['PUT'])
+@csrf.exempt
 @login_required
 def admin_update_user(user_id):
     # Check if user is admin
@@ -2399,6 +2464,7 @@ def admin_update_user(user_id):
     })
 
 @app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def admin_delete_user(user_id):
     # Check if user is admin
@@ -2428,6 +2494,7 @@ def admin_delete_user(user_id):
     return jsonify({'success': True})
 
 @app.route('/admin/users/<int:user_id>/toggle-admin', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_toggle_admin(user_id):
     # Check if user is admin
@@ -2449,6 +2516,7 @@ def admin_toggle_admin(user_id):
     return jsonify({'success': True, 'is_admin': user.is_admin})
 
 @app.route('/admin/stats', methods=['GET'])
+@csrf.exempt
 @login_required
 def admin_get_stats():
     # Check if user is admin
@@ -2507,6 +2575,7 @@ def admin_get_stats():
     })
 
 @app.route('/admin/settings', methods=['GET'])
+@csrf.exempt
 @login_required
 def admin_get_settings():
     # Check if user is admin
@@ -2517,6 +2586,7 @@ def admin_get_settings():
     return jsonify([setting.to_dict() for setting in settings])
 
 @app.route('/admin/settings', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_update_setting():
     # Check if user is admin
@@ -2565,6 +2635,7 @@ def admin_update_setting():
 
 # --- Configuration API ---
 @app.route('/api/config', methods=['GET'])
+@csrf.exempt
 def get_config():
     """Get application configuration settings for the frontend."""
     try:
@@ -2581,12 +2652,14 @@ def get_config():
 
 # --- Flask Routes ---
 @app.route('/')
+@csrf.exempt
 @login_required
 def index():
     # Pass the ASR config to the template
     return render_template('index.html', use_asr_endpoint=USE_ASR_ENDPOINT)
 
 @app.route('/recordings', methods=['GET'])
+@csrf.exempt
 def get_recordings():
     try:
         # Check if user is logged in
@@ -2602,6 +2675,7 @@ def get_recordings():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/inbox_recordings', methods=['GET'])
+@csrf.exempt
 @login_required
 def get_inbox_recordings():
     """Get recordings that are in the inbox and currently processing."""
@@ -2619,6 +2693,7 @@ def get_inbox_recordings():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/save', methods=['POST'])
+@csrf.exempt
 @login_required
 def save_metadata():
     try:
@@ -2664,6 +2739,7 @@ def save_metadata():
         return jsonify({'error': 'An unexpected error occurred while saving.'}), 500
 
 @app.route('/recording/<int:recording_id>/update_transcription', methods=['POST'])
+@csrf.exempt
 @login_required
 def update_transcription(recording_id):
     """Updates the transcription content for a recording."""
@@ -2699,6 +2775,7 @@ def update_transcription(recording_id):
 
 # Toggle inbox status endpoint
 @app.route('/recording/<int:recording_id>/toggle_inbox', methods=['POST'])
+@csrf.exempt
 @login_required
 def toggle_inbox(recording_id):
     try:
@@ -2722,6 +2799,7 @@ def toggle_inbox(recording_id):
 
 # Toggle highlighted status endpoint
 @app.route('/recording/<int:recording_id>/toggle_highlight', methods=['POST'])
+@csrf.exempt
 @login_required
 def toggle_highlight(recording_id):
     try:
@@ -2745,6 +2823,7 @@ def toggle_highlight(recording_id):
 
 
 @app.route('/upload', methods=['POST'])
+@csrf.exempt
 @login_required
 def upload_file():
     try:
@@ -2862,6 +2941,7 @@ def upload_file():
 
 # Status Endpoint
 @app.route('/status/<int:recording_id>', methods=['GET'])
+@csrf.exempt
 @login_required
 def get_status(recording_id):
     """Endpoint to check the transcription/summarization status."""
@@ -2873,14 +2953,37 @@ def get_status(recording_id):
         # Check if the recording belongs to the current user
         if recording.user_id and recording.user_id != current_user.id:
             return jsonify({'error': 'You do not have permission to view this recording'}), 403
-            
-        return jsonify(recording.to_dict())
+
+        result = recording.to_dict()  
+      
+        # 检查是否在summary队列中  
+        summary_task = SummaryTask.query.filter( 
+            SummaryTask.recording_id==recording_id,  
+            SummaryTask.status.in_(['QUEUED', 'PROCESSING'])
+        ).first()  
+          
+        if summary_task:  
+            if summary_task.status == 'QUEUED':  
+                # 计算队列位置  
+                queue_position = SummaryTask.query.filter(  
+                    SummaryTask.status == 'QUEUED',  
+                    SummaryTask.created_at < summary_task.created_at  
+                ).count() + 1  
+                  
+                result['summary_queue_status'] = 'QUEUED'  
+                result['queue_position'] = queue_position  
+            elif summary_task.status == 'PROCESSING':  
+                result['summary_queue_status'] = 'PROCESSING'  
+
+
+        return jsonify(result) # recording.to_dict())
     except Exception as e:
         app.logger.error(f"Error fetching status for recording {recording_id}: {e}", exc_info=True)
         return jsonify({'error': 'An unexpected error occurred.'}), 500
 
 # Get Audio Endpoint
 @app.route('/audio/<int:recording_id>')
+@csrf.exempt
 @login_required
 def get_audio(recording_id):
     try:
@@ -2900,6 +3003,7 @@ def get_audio(recording_id):
         return jsonify({'error': 'An unexpected error occurred.'}), 500
 
 @app.route('/share/audio/<string:public_id>')
+@csrf.exempt
 def get_shared_audio(public_id):
     try:
         share = Share.query.filter_by(public_id=public_id).first_or_404()
@@ -2916,6 +3020,7 @@ def get_shared_audio(public_id):
 
 # Delete Recording Endpoint
 @app.route('/recording/<int:recording_id>', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def delete_recording(recording_id):
     try:
@@ -2978,6 +3083,7 @@ def get_file_monitor_functions():
 
 # --- Auto-Processing API Endpoints ---
 @app.route('/admin/auto-process/status', methods=['GET'])
+@csrf.exempt
 @login_required
 def admin_get_auto_process_status():
     """Get the status of the automated file processing system."""
@@ -3007,6 +3113,7 @@ def admin_get_auto_process_status():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/auto-process/start', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_start_auto_process():
     """Start the automated file processing system."""
@@ -3022,6 +3129,7 @@ def admin_start_auto_process():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/auto-process/stop', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_stop_auto_process():
     """Stop the automated file processing system."""
@@ -3037,6 +3145,7 @@ def admin_stop_auto_process():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/auto-process/config', methods=['POST'])
+@csrf.exempt
 @login_required
 def admin_update_auto_process_config():
     """Update auto-processing configuration (requires restart)."""
@@ -3069,3 +3178,7 @@ if __name__ == '__main__':
     # waitress-serve --host 0.0.0.0 --port 8899 app:app
     # For development:
     app.run(host='0.0.0.0', port=8899, debug=True) # Set debug=False if thread issues arise
+
+from task_queue import summary_queue
+summary_queue.recover_interrupted_tasks()
+summary_queue.start_worker()

@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Admin Dashboard - Speakr</title>
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/svg+xml">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="http://ai.byfunds.com/hystatic/tailwindcss.js"></script>
+    <script src="http://ai.byfunds.com/hystatic/vue@3/dist/vue.global.js"></script>
+    <link href="http://ai.byfunds.com/hystatic/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <script>
+        const BASE_PATH='/speakr';
+
         // Function to apply the theme based on localStorage
         function applyTheme() {
             // Apply dark mode
@@ -62,16 +63,16 @@
                         <i class="fas fa-chevron-down ml-2"></i>
                     </button>
                     <div v-if="isUserMenuOpen" class="absolute right-0 mt-2 w-48 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg z-10">
-                        <a href="{{ url_for('index') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
+			    <a href="/speakr" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
                             <i class="fas fa-home mr-2"></i> Home
                         </a>
-                        <a href="{{ url_for('account') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
+                        <a href="/speakr/account" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-accent)]">
                             <i class="fas fa-user mr-2"></i> Account
                         </a>
-                        <a href="{{ url_for('admin') }}" class="block px-4 py-2 text-[var(--text-accent)] bg-[var(--bg-accent)]">
+                        <a href="/speakr/admin" class="block px-4 py-2 text-[var(--text-accent)] bg-[var(--bg-accent)]">
                             <i class="fas fa-user-shield mr-2"></i> Admin
                         </a>
-                        <a href="{{ url_for('logout') }}" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-danger)]">
+                        <a href="/speakr/logout" class="block px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-danger)]">
                             <i class="fas fa-sign-out-alt mr-2"></i> Logout
                         </a>
                     </div>
@@ -440,7 +441,8 @@
     </div>
     
     <script>
-        const { createApp, ref, computed, onMounted, watch } = Vue
+	const { createApp, ref, computed, onMounted, watch } = Vue
+
         
         createApp({
             setup() {
@@ -494,7 +496,7 @@
                 const loadUsers = async () => {
                     isLoadingUsers.value = true;
                     try {
-                        const response = await fetch('/admin/users');
+			    const response = await fetch(`${BASE_PATH}/admin/users`);
                         if (!response.ok) throw new Error('Failed to load users');
                         
                         const data = await response.json();
@@ -509,7 +511,7 @@
                 
                 const loadStats = async () => {
                     try {
-                        const response = await fetch('/admin/stats');
+                        const response = await fetch(`${BASE_PATH}/admin/stats`);
                         if (!response.ok) throw new Error('Failed to load statistics');
                         
                         const data = await response.json();
@@ -523,7 +525,7 @@
                 const loadSettings = async () => {
                     isLoadingSettings.value = true;
                     try {
-                        const response = await fetch('/admin/settings');
+                        const response = await fetch(`${BASE_PATH}/admin/settings`);
                         if (!response.ok) throw new Error('Failed to load settings');
                         
                         const data = await response.json();
@@ -551,17 +553,17 @@
                 const updateSetting = async (key, value, description, settingType) => {
                     try {
                         // Get CSRF token
-                        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                         
                         const headers = {
                             'Content-Type': 'application/json'
                         };
                         
-                        if (csrfToken) {
-                            headers['X-CSRFToken'] = csrfToken;
-                        }
+                        //if (csrfToken) {
+                        //    headers['X-CSRFToken'] = csrfToken;
+                        //}
                         
-                        const response = await fetch('/admin/settings', {
+                        const response = await fetch(`${BASE_PATH}/admin/settings`, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify({
@@ -600,17 +602,17 @@
                     
                     try {
                         // Get CSRF token
-                        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                         
                         const headers = {
                             'Content-Type': 'application/json'
                         };
                         
-                        if (csrfToken) {
-                            headers['X-CSRFToken'] = csrfToken;
-                        }
+                        //if (csrfToken) {
+                        //    headers['X-CSRFToken'] = csrfToken;
+                        //}
                         
-                        const response = await fetch('/admin/users', {
+                        const response = await fetch(`${BASE_PATH}/admin/users`, {
                             method: 'POST',
                             headers: headers,
                             body: JSON.stringify({
@@ -665,17 +667,17 @@
                         }
                         
                         // Get CSRF token
-                        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                         
                         const headers = {
                             'Content-Type': 'application/json'
                         };
                         
-                        if (csrfToken) {
-                            headers['X-CSRFToken'] = csrfToken;
-                        }
+                        //if (csrfToken) {
+                        //    headers['X-CSRFToken'] = csrfToken;
+                        //}
                         
-                        const response = await fetch(`/admin/users/${editingUser.value.id}`, {
+                        const response = await fetch(`${BASE_PATH}/admin/users/${editingUser.value.id}`, {
                             method: 'PUT',
                             headers: headers,
                             body: JSON.stringify(payload)
@@ -704,15 +706,15 @@
                 const deleteUser = async () => {
                     try {
                         // Get CSRF token
-                        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                         
                         const headers = {};
                         
-                        if (csrfToken) {
-                            headers['X-CSRFToken'] = csrfToken;
-                        }
+                        //if (csrfToken) {
+                        //    headers['X-CSRFToken'] = csrfToken;
+                        //}
                         
-                        const response = await fetch(`/admin/users/${userToDelete.value.id}`, {
+                        const response = await fetch(`${BASE_PATH}/admin/users/${userToDelete.value.id}`, {
                             method: 'DELETE',
                             headers: headers
                         });
@@ -736,15 +738,15 @@
                 const toggleAdminStatus = async (user) => {
                     try {
                         // Get CSRF token
-                        const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                        //const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
                         
                         const headers = {};
                         
-                        if (csrfToken) {
-                            headers['X-CSRFToken'] = csrfToken;
-                        }
+                        //if (csrfToken) {
+                        //    headers['X-CSRFToken'] = csrfToken;
+                        //}
                         
-                        const response = await fetch(`/admin/users/${user.id}/toggle-admin`, {
+                        const response = await fetch(`${BASE_PATH}/admin/users/${user.id}/toggle-admin`, {
                             method: 'POST',
                             headers: headers
                         });
