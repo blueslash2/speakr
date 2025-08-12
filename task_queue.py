@@ -37,21 +37,27 @@ class SummaryTaskQueue:
             task = SummaryTask(
                 recording_id=recording_id,
                 custom_config=config_json,
-                status='QUEUED'
+                status='SQUEUED'
             )
             db.session.add(task)
+            
+            # 更新关联的录音状态为'SQUEUED'
+            recording = db.session.get(Recording, recording_id)
+            if recording:
+                recording.status = 'SQUEUED'
+            
             db.session.commit()
-            # 详细的任务添加日志  
-            self.logger.info(f"[QUEUE] Added task {task.id} for recording {recording_id}")  
-            self.logger.info(f"[QUEUE] Custom config: {custom_config}")  
-            self.logger.info(f"[QUEUE] Current queue size: {self._get_queue_size()}")  
-              
+            # 详细的任务添加日志
+            self.logger.info(f"[QUEUE] Added task {task.id} for recording {recording_id}")
+            self.logger.info(f"[QUEUE] Custom config: {custom_config}")
+            self.logger.info(f"[QUEUE] Current queue size: {self._get_queue_size()}")
+               
             self.start_worker()
 
     def _get_queue_size(self):
         """获取当前队列大小"""
         try:
-            return SummaryTask.query.filter_by(status='QUEUED').count()
+            return SummaryTask.query.filter_by(status='SQUEUED').count()
         except:
             return "unknown"
 
@@ -63,17 +69,17 @@ class SummaryTaskQueue:
             try:
                 with app.app_context():
                     # 获取最早的排队任务
-                    task = SummaryTask.query.filter_by(status='QUEUED').order_by(SummaryTask.created_at).first()
+                    task = SummaryTask.query.filter_by(status='SQUEUED').order_by(SummaryTask.created_at).first()
                     if task:
-                        self.logger.info(f"[WORKER] Processing task {task.id} for recording {task.recording_id}")  
+                        self.logger.info(f"[WORKER] SUMMARIZING task {task.id} for recording {task.recording_id}")  
                         self.logger.info(f"[WORKER] Task created at: {task.created_at}")  
                         self.logger.info(f"[WORKER] Queue wait time: {datetime.utcnow() - task.created_at}")  
             
                         self.current_task_id = task.id
-                        task.status = 'PROCESSING'
+                        task.status = 'SUMMARIZING'
                         task.started_at = datetime.utcnow()
                         db.session.commit()
-                        self.logger.info(f"[WORKER] Task {task.id} status updated to PROCESSING")  
+                        self.logger.info(f"[WORKER] Task {task.id} status updated to SUMMARIZING")  
                           
                         # 执行任务前的状态检查  
                         recording = db.session.get(Recording, task.recording_id)  
@@ -107,7 +113,7 @@ class SummaryTaskQueue:
                             db.session.commit()  
                           
                         self.current_task_id = None  
-                        self.logger.info(f"[WORKER] Finished processing task {task.id}")  
+                        self.logger.info(f"[WORKER] Finished SUMMARIZING task {task.id}")  
                        
                     else:
                         # 没有任务时的详细日志（可以设置为DEBUG级别）  
@@ -144,10 +150,10 @@ class SummaryTaskQueue:
             # 将处理中的任务重置为排队状态  
             interrupted_tasks = SummaryTask.query.filter_by(status='PROCESSING').all()  
             for task in interrupted_tasks:  
-                task.status = 'QUEUED'  
+                task.status = 'SQUEUED'  
                 task.started_at = None  
             db.session.commit()
-            self.logger.info(f"[RECOVERY] Reset {len(interrupted_tasks)} interrupted tasks to QUEUED status")  
+            self.logger.info(f"[RECOVERY] Reset {len(interrupted_tasks)} interrupted tasks to SQUEUED status")  
               
 
     def _execute_summary_task(self, task):

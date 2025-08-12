@@ -568,6 +568,7 @@ div[v-if="!editingNotes"] {
      opacity: 1;
  }
  .status-processing { color: #1d4ed8; background-color: #dbeafe; } /* text-blue-800 bg-blue-100 */
+ .status-squeued { color: #92400e; background-color: #fef3c7; } /* text-amber-800 bg-amber-100 */
  .status-summarizing { color: #92400e; background-color: #fef3c7; } /* text-amber-800 bg-amber-100 */
  .status-completed { color: #065f46; background-color: #d1fae5; } /* text-green-800 bg-green-100 */
  .status-failed { color: #991b1b; background-color: #fee2e2; } /* text-red-800 bg-red-100 */

@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 switch(status) {
                     case 'PENDING': return 'status-pending';
                     case 'PROCESSING': return 'status-processing';
-                    case 'QUEUED': return 'status-queued';
+                    case 'SQUEUED': return 'status-squeued';
                     case 'SUMMARIZING': return 'status-summarizing';
                     case 'COMPLETED': return '';
                     case 'FAILED': return 'status-failed';
@@ -1201,24 +1201,30 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const updateReprocessingProgress = (status, queueItem, data) => {
 	    // 检查队列状态  
-		if (data.summary_queue_status === 'QUEUED') {  
-                    processingProgress.value = 15;  
-                    processingMessage.value = `Waiting in summary queue (position ${data.queue_position || 'unknown'})...`;  
-                    return;  
-                }  
+		//if (data.summary_queue_status === 'SQUEUED') {  
+        //            processingProgress.value = 15;  
+        //            processingMessage.value = `Waiting in summary queue (position ${data.queue_position || 'unknown'})...`;  
+        //            return;  
+        //        }  
 		switch (status) {
                     case 'PENDING':
                         processingProgress.value = 20;
-                        processingMessage.value = `Waiting to start ${queueItem.reprocessType} reprocessing...`;
+                        processingMessage.value = `正准备重新开始 ${queueItem.reprocessType} ...`;
                         break;
                     case 'PROCESSING':
                         processingProgress.value = Math.round(Math.min(70, processingProgress.value + Math.random() * 10));
                         processingMessage.value = queueItem.reprocessType === 'transcription' 
-                            ? 'Reprocessing transcription...' 
-                            : 'Processing audio...';
+                            ? '正在重新转录抄本...' 
+                            : '正在处理录音...';
+                        break;
+                    case 'SQUEUED':
+                        processingProgress.value = Math.round(Math.min(80, processingProgress.value + Math.random() * 10));
+                        processingMessage.value = queueItem.reprocessType === 'squeued' 
+                            ? '排队等待重新生成总结...' 
+                            : '排队等待生成总结...';
                         break;
                     case 'SUMMARIZING':
-                        if (data.summary_queue_status === 'PROCESSING') {  
+                    /*    if (data.summary_queue_status === 'PROCESSING') {  
                             processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));  
                             processingMessage.value = 'Generating summary...';  
                         } else {  
@@ -1226,23 +1232,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             processingMessage.value = queueItem.reprocessType === 'summary'   
                                 ? 'Regenerating summary...'   
                                 : 'Generating title and summary...';  
-                        } 
-//                        processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));
-//                        processingMessage.value = queueItem.reprocessType === 'summary' 
-//                            ? 'Regenerating summary...' 
-//                            : 'Generating title and summary...';
+                        } */
+                        processingProgress.value = Math.round(Math.min(90, processingProgress.value + Math.random() * 10));
+                        processingMessage.value = queueItem.reprocessType === 'summary' 
+                            ? '正在重新生成总结...' 
+                            : '正在生成总结和标题...';
                         break;
                     case 'COMPLETED':
                         processingProgress.value = 100;
-                        processingMessage.value = 'Reprocessing completed!';
+                        processingMessage.value = '重新处理完毕!';
                         break;
                     case 'FAILED':
                         processingProgress.value = 100;
-                        processingMessage.value = 'Reprocessing failed.';
+                        processingMessage.value = '重新处理没有成功.';
                         break;
                     default:
                         processingProgress.value = 15;
-                        processingMessage.value = 'Starting reprocessing...';
+                        processingMessage.value = '正在重新开始...';
                 }
             };
 
@@ -1860,7 +1866,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (data.status === 'COMPLETED') {
                             console.log(`Processing COMPLETED for ${fileItem.file.name} (ID: ${recordingId})`);
-                            processingMessage.value = 'Processing complete!';
+                            processingMessage.value = '处理成功!';
                             processingProgress.value = 100;
                             fileItem.status = 'completed';
                             clearInterval(pollInterval.value);
@@ -1872,10 +1878,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         } else if (data.status === 'FAILED') {
                             console.log(`Processing FAILED for ${fileItem.file.name} (ID: ${recordingId})`);
-                            processingMessage.value = 'Processing failed.';
+                            processingMessage.value = '处理失败.';
                             processingProgress.value = 100;
                             fileItem.status = 'failed';
-                            fileItem.error = data.transcription || data.summary || 'Processing failed on server.';
+                            fileItem.error = data.transcription || data.summary || '服务端处理失败.';
                             setGlobalError(`Processing failed for "${data.title || fileItem.file.name}".`);
                             clearInterval(pollInterval.value);
                             pollInterval.value = null;
@@ -1885,13 +1891,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             startProcessingQueue();
 
                         } else if (data.status === 'PROCESSING') {
-                            processingMessage.value = 'Transcription in progress...';
+                            processingMessage.value = '正在转录为抄本...';
                             processingProgress.value = Math.round(Math.min(65, processingProgress.value + Math.random() * 5));
+                        } else if (data.status === 'SQUEUED') {
+                            processingMessage.value = '正在排队等待生成总结...';
+                            processingProgress.value = Math.round(Math.min(80, processingProgress.value + Math.random() * 5));
                         } else if (data.status === 'SUMMARIZING') {
-                            processingMessage.value = 'Generating title & summary...';
+                            processingMessage.value = '正在生成总结和标题...';
                             processingProgress.value = Math.round(Math.min(95, processingProgress.value + Math.random() * 5));
                         } else {
-                            processingMessage.value = 'Waiting in queue...';
+                            processingMessage.value = '正在排队...';
                             processingProgress.value = 45;
                         }
                     } catch (error) {
@@ -1930,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    const incompleteRecordings = recordings.value.filter(r => ['PENDING', 'PROCESSING', 'SUMMARIZING'].includes(r.status));
+                    const incompleteRecordings = recordings.value.filter(r => ['PENDING', 'PROCESSING'].includes(r.status));
                     if (incompleteRecordings.length > 0 && !isProcessingActive.value) {
                         console.warn(`Found ${incompleteRecordings.length} incomplete recording(s) on load.`);
                         for (const recording of incompleteRecordings) {

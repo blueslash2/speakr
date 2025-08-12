@@ -473,7 +473,7 @@ class SummaryTask(db.Model):
     __tablename__ = 'summary_tasks'
     id = db.Column(db.Integer, primary_key=True)
     recording_id = db.Column(db.Integer, db.ForeignKey('recording.id'), nullable=False)
-    status = db.Column(db.String(20), default='QUEUED')  # QUEUED, PROCESSING, COMPLETED, FAILED
+    status = db.Column(db.String(20), default='SQUEUED')  # SQUEUED, SUMMARIZING, COMPLETED, FAILED
     custom_config = db.Column(db.Text)  # JSON string
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     started_at = db.Column(db.DateTime)
@@ -1928,7 +1928,7 @@ def reprocess_summary(recording_id):
             return jsonify({'error': 'No valid transcription available for summary generation'}), 400
             
         # Check if already processing
-        if recording.status in ['PROCESSING', 'SUMMARIZING']:
+        if recording.status in ['PROCESSING', 'SUMMARIZING', 'SQUEUED']:
             return jsonify({'error': 'Recording is already being processed'}), 400
             
         # Check if OpenRouter client is available
@@ -1937,7 +1937,7 @@ def reprocess_summary(recording_id):
             
         # Set status to SUMMARIZING and clear existing summary
         recording.summary = None
-        recording.status = 'SUMMARIZING'
+        recording.status = 'SQUEUED'
         db.session.commit()
         
         app.logger.info(f"Starting summary reprocessing for recording {recording_id}")
@@ -2683,7 +2683,7 @@ def get_inbox_recordings():
         stmt = select(Recording).where(
             Recording.user_id == current_user.id,
             Recording.is_inbox == True,
-            Recording.status.in_(['PENDING', 'PROCESSING', 'SUMMARIZING'])
+            Recording.status.in_(['PENDING', 'PROCESSING', 'SQUEUED', 'SUMMARIZING'])
         ).order_by(Recording.created_at.desc())
         
         recordings = db.session.execute(stmt).scalars().all()
@@ -2959,18 +2959,18 @@ def get_status(recording_id):
         # 检查是否在summary队列中  
         summary_task = SummaryTask.query.filter( 
             SummaryTask.recording_id==recording_id,  
-            SummaryTask.status.in_(['QUEUED', 'PROCESSING'])
+            SummaryTask.status.in_(['SQUEUED', 'PROCESSING'])
         ).first()  
           
         if summary_task:  
-            if summary_task.status == 'QUEUED':  
+            if summary_task.status == 'SQUEUED':  
                 # 计算队列位置  
                 queue_position = SummaryTask.query.filter(  
-                    SummaryTask.status == 'QUEUED',  
+                    SummaryTask.status == 'SQUEUED',  
                     SummaryTask.created_at < summary_task.created_at  
                 ).count() + 1  
                   
-                result['summary_queue_status'] = 'QUEUED'  
+                result['summary_queue_status'] = 'SQUEUED'  
                 result['queue_position'] = queue_position  
             elif summary_task.status == 'PROCESSING':  
                 result['summary_queue_status'] = 'PROCESSING'  
