@@ -68,6 +68,13 @@ class SummaryTaskQueue:
         while self.is_running:
             try:
                 with app.app_context():
+
+                    # 检查是否已有任务在执行  
+                    running_task = SummaryTask.query.filter_by(status='SUMMARIZING').first()  
+                    if running_task:  
+                        time.sleep(10)  # 有任务在执行，等待  
+                        continue  
+
                     # 获取最早的排队任务
                     task = SummaryTask.query.filter_by(status='SQUEUED').order_by(SummaryTask.created_at).first()
                     if task:
@@ -148,7 +155,7 @@ class SummaryTaskQueue:
           
         with app.app_context():  
             # 将处理中的任务重置为排队状态  
-            interrupted_tasks = SummaryTask.query.filter_by(status='PROCESSING').all()  
+            interrupted_tasks = SummaryTask.query.filter_by(status='SUMMARIZING').all()  
             for task in interrupted_tasks:  
                 task.status = 'SQUEUED'  
                 task.started_at = None  

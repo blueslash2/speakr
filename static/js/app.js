@@ -676,7 +676,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const formatStatus = (status) => {
                 if (!status || status === 'COMPLETED') return '';
-                return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+                switch(status) {
+                    case 'PENDING': return '上传中';
+                    case 'PROCESSING': return '转录中';
+                    case 'SQUEUED': return '排队中';
+                    case 'SUMMARIZING': return '总结中';
+                    case 'COMPLETED': return '';
+                    case 'FAILED': return '出错';
+                    default: return '上传中';
+                }
+                //return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
             };
 
             const getStatusClass = (status) => {

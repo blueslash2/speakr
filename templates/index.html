@@ -921,7 +921,10 @@
                                                 <i class="fas fa-spinner fa-spin text-2xl text-[var(--text-muted)]"></i>
                                                 <p class="mt-2 text-[var(--text-muted)]">正在进行总结...</p>
                                             </div>
-                                            
+                                            <div v-else-if="selectedRecording.status === 'SQUEUED'" class="text-center py-8">
+                                                <i class="fas fa-spinner fa-spin text-2xl text-[var(--text-muted)]"></i>
+                                                <p class="mt-2 text-[var(--text-muted)]">等待队列名额...</p>
+                                            </div>                                       
                                             <div v-else-if="!selectedRecording.summary" class="text-center py-8">
                                                 <i class="fas fa-file-alt text-3xl text-[var(--text-muted)] mb-3"></i>
                                                 <p class="text-[var(--text-muted)]">找不到可用的总结</p>
