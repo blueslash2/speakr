@@ -649,13 +649,13 @@
                                         <button @click="toggleInbox(selectedRecording)"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                                                 :class="selectedRecording.is_inbox ? 'text-blue-500' : ''"
-                                                :title="selectedRecording.is_inbox ? 'Mark as Read' : 'Move to Inbox'">
+                                                :title="selectedRecording.is_inbox ? '标为已读' : '标为未读'">
                                             <i class="fas fa-inbox"></i>
                                         </button>
                                         <button @click="toggleHighlight(selectedRecording)"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
                                                 :class="selectedRecording.is_highlighted ? 'text-yellow-500' : ''"
-                                                :title="selectedRecording.is_highlighted ? 'Remove Highlight' : 'Highlight'">
+                                                :title="selectedRecording.is_highlighted ? '取消关注' : '关注'">
                                             <i class="fas fa-star"></i>
                                         </button>
                                         <button @click="editRecording(selectedRecording)" 
@@ -664,27 +664,27 @@
                                         </button>
                                         <button @click="reprocessTranscription(selectedRecording.id)" v-if="selectedRecording && (selectedRecording.status === 'COMPLETED' || selectedRecording.status === 'FAILED')"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                                                :title="useAsrEndpoint ? 'Reprocess with ASR' : 'Reprocess transcription'">
+                                                :title="useAsrEndpoint ? '重新识别发言' : '重新转文本'">
                                             <i class="fas fa-redo-alt"></i>
                                         </button>
                                         <button @click="reprocessSummary(selectedRecording.id)" v-if="selectedRecording && (selectedRecording.status === 'COMPLETED' || selectedRecording.status === 'FAILED')"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                                                title="Reprocess summary">
-                                            <i class="fas fa-sync-alt"></i>
+                                                title="重新总结纪要">
+                                            <i class="fas fa-list-ol"></i>
                                         </button>
                                         <button @click="confirmReset(selectedRecording)" v-if="['PROCESSING', 'SUMMARIZING', 'FAILED'].includes(selectedRecording.status)"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-orange-500"
-                                                title="Reset stuck processing">
+                                                title="从失败状态恢复">
                                             <i class="fas fa-undo"></i>
                                         </button>
                                         <button @click="openSpeakerModal" v-if="selectedRecording.transcription && useAsrEndpoint"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                                                title="Identify Speakers">
+                                                title="编辑发言人信息">
                                             <i class="fas fa-user-tag"></i>
                                         </button>
                                         <button @click="openShareModal(selectedRecording)"
                                                 class="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-                                                title="Share Recording">
+                                                title="分享录音">
                                             <i class="fas fa-share-alt"></i>
                                         </button>
                                         <button @click="confirmDelete(selectedRecording)" 

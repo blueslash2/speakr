@@ -942,30 +942,30 @@ def generate_summary_task(app_context, recording_id, start_time):
             user_summary_prompt = recording.owner.summary_prompt
             user_output_language = recording.owner.output_language
 
-        default_summary_prompt = """Analyze the following audio transcription and generate a concise title and a detailed, well-structured summary in Markdown format.
+        default_summary_prompt = """请分析以下音频转录文本并生成一个简洁的标题以及一个结构良好、详尽的 Markdown 格式摘要.
 
-Transcription:
+音频转录文本:
 \"\"\"
 {transcription}
 \"\"\"
 
-Respond STRICTLY with a JSON object containing two keys: "title" and "summary".
+**请严格**以一个 JSON 对象响应，该对象包含两个key，key名为 "title" 和 "summary"。
 
-1.  **title**: A short, descriptive title (max 6-8 words). Avoid introductory phrases like "Discussion on" or "Meeting about".
-2.  **summary**: A detailed summary in Markdown format. It should include the following sections:
-    *   **Key Issues Discussed**: A bulleted list of the main topics.
-    *   **Key Decisions Made**: A bulleted list of any decisions reached.
-    *   **Action Items**: A bulleted list of tasks assigned, including who is responsible if mentioned.
+1.  **title**: 简短且具有描述性的标题（最多 6–8 个词）。避免使用诸如 “Discussion on” 或 “Meeting about” 之类的引入性短语。
+2.  **summary**: 以 Markdown 格式给出详细摘要，应包含以下部分:
+   * **主要议题：**：以要点（项目符号）列出讨论的主要议题。  
+   * **主要决策：**：以要点列出达成的任何决策。  
+   * **跟进事项：**：以要点列出分配的任务（若有提到责任人，请标明谁负责）。
 
-{language_directive}
+请用与音频转录文本相同的语种提供标题和摘要，如果难以辨别，使用简体中文。
 
-Example Format:
+示例格式:
 {{
-  "title": "Q3 Strategy and Project Phoenix",
-  "summary": "### Key Issues Discussed\\n- Review of Q2 performance and its impact on Q3 planning.\\n- Feasibility and timeline for Project Phoenix.\\n- Budget constraints and resource allocation for new initiatives.\\n\\n### Key Decisions Made\\n- Project Phoenix is approved to proceed with a revised timeline.\\n- The marketing budget will be reallocated to support the new launch.\\n\\n### Action Items\\n- **Alice**: Finalize the Project Phoenix roadmap by next Friday.\\n- **Bob**: Present the revised budget to the finance committee."
+  "title": "第三季度战略与凤凰项目",
+  "summary": "### 主要议题：\\n- 回顾第二季度业绩及其对第三季度规划的影响。\\n- 对“凤凰项目”的可行性与时间表评估。\\n- 预算约束与新项目的资源分配。\\n\\n### 主要决策\\n- 批准“凤凰项目”继续推进，时间表作出调整。\\n- 将营销预算重新分配以支持新产品发布。\\n\\n### 跟进事项\\n- **Alice**：于下周五前完成“凤凰项目”路线图。\\n- **Bob**：向财务委员会提交经修订的预算。"
 }}
 
-JSON Response:"""
+JSON 响应:"""
 
         language_directive = f"Please provide the title and summary in {user_output_language}." if user_output_language else ""
         
@@ -1959,36 +1959,38 @@ def reprocess_summary(recording_id):
                         user_output_language = recording.owner.output_language
                     
                     # Prepare prompt (same logic as in transcribe_audio_task)
-                    default_summary_prompt = """Analyze the following audio transcription and generate a concise title and a brief summary.
+                    default_summary_prompt = """请分析以下音频转录文本并生成一个简洁的标题和一段简短的摘要.
 
-Transcription:
+音频转录文本:
 \"\"\"
 {transcription}
 \"\"\"
 
-Respond STRICTLY with a JSON object containing two keys: "title" (a short, descriptive title, max 6 words without using words introductory words and phrases like brief, "discussion on", "Meeting about" etc.) and "minutes" (a paragraph summarizing the key points, max 150 words). The title should get to the point without inroductory phrases as we have very little space to show the title.
-{language_directive}
-Example Format:
+请严格以一个JSON 对象响应，它包含两个key ，key名为 "title"（一个简短、具有描述性的标题，最多 6-8 个单词，避免使用诸如 “brief”、“discussion on”、“Meeting about” 等引导性词语或短语），以及 "minutes"（一段总结关键要点的段落，最多 150 字）。标题应直截了当，不使用引导性短语，因为我们用于显示标题的空间非常有限。
+
+请用与音频转录文本相同的语种提供标题和摘要，如果难以辨别语种，则使用简体中文。
+
+示例格式:
 {{
   "title": "Q3 Results for SPERO Program",
-  "summary": "### Minutes
+  "summary": "### 会议纪要：
 
-**Meeting Participants:**  
+**参会人:**  
 - Bob  
 - Alice  
 
 ---
 
-**1. Introduction and Overview:**
-- Alice expressed interest in understanding the responsibilities at the north division and the potential for technological innovations.
+**1. 引言与概览:**
+- Alice 表示希望了解北部分部的职责以及技术创新的潜力.
 ....
-### Key Issues Discussed
+### 主要议题
 ....
-//and so on and so forth. Make sure not to miss any nuance or details. 
+//诸如此类，依此类推。确保不要遗漏任何细微之处或细节. 
 "
 }}
 
-JSON Response:"""
+JSON 响应:"""
                     
                     language_directive = f"Please provide the title and summary in {user_output_language}." if user_output_language else ""
                     
